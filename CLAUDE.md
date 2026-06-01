@@ -97,6 +97,7 @@ slog.Info(fmt.Sprintf("iter %d done", i))
 
 // ✅ 错误日志
 slog.Error("executor failed", "err", err, "cmd", cmd)
+```
 
 级别使用：
   - Debug：开发调试，详细执行轨迹
@@ -121,7 +122,7 @@ slog.Error("executor failed", "err", err, "cmd", cmd)
 - 新增功能必须有测试（核心包覆盖率目标 70%+，CLI/main 不强求）
 - 表驱动优先：
 
-```
+```go
 tests := []struct {
     name    string
     input   string
@@ -236,9 +237,9 @@ Refs: docs/adr/0003-retry-strategy.md
 
 8. 参考资料
 
-Go 官方：Effective Go
-项目布局：golang-standards/project-layout（仅参考，不要照搬）
-slog 教程：Go Blog: Structured Logging
+Go 官方：[Effective Go](https://go.dev/doc/effective_go)
+项目布局：[golang-standards/project-layout](https://github.com/golang-standards/project-layout), 仅参考，不要照搬
+slog 教程：[Go Blog: Structured Logging](https://go.dev/blog/slog)
 Ralph Wiggum technique：（待补充原始链接）
 
 
@@ -250,40 +251,4 @@ Ralph Wiggum technique：（待补充原始链接）
 - 不要让本文件超过 500 行：超过说明该拆成多个文件（如 docs/coding-style.md）
 
 ```
-
----
-
-## 启动操作清单（一次性）
-
-按顺序执行，**今晚就能让 Claude Code 写第一个真实功能**：
-
-```bash
-# 1. 初始化仓库
-mkdir ralph && cd ralph
-git init
-go mod init github.com/yourname/ralph
-
-# 2. 创建上述目录结构（手动 mkdir 或写个脚本）
-mkdir -p cmd/ralph internal/{agent,executor,prompt,memory,config,cli} pkg testdata docs/adr
-
-# 3. 复制上面所有文件内容到对应位置
-
-# 4. 拉依赖
-go mod tidy
-
-# 5. 安装开发工具
-make install-tools
-
-# 6. 验证一切正常
-make fmt
-make lint
-make test
-make run    # 应该打印 "TODO: run agent with goal=..." 或 cobra usage
-
-# 7. 首次提交
-git add .
-git commit -m "chore: initial project scaffold with CLAUDE.md"
-```
-
-
 
