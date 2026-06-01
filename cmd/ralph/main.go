@@ -43,7 +43,9 @@ func run() int {
 	// 3. 执行 cobra root command
 	if err := cli.NewRootCmd().ExecuteContext(ctx); err != nil {
 		slog.Error("execution failed", "err", err)
-		return 1
+		// 恢复默认信号处理（defer 不会在 os.Exit 前执行）
+		stop()
+		os.Exit(1)
 	}
 	return 0
 }
