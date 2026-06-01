@@ -49,6 +49,11 @@ linters-settings:
 
 issues:
   exclude-rules:
+    # os.Exit 前手动调 stop() 清理信号：defer 不会执行，这是预期行为
+    - path: cmd/ralph/main\.go
+      linters:
+        - gocritic
+      text: "exitAfterDefer"
     # 测试文件放宽
     - path: _test\.go
       linters:
