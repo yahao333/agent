@@ -5,19 +5,34 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/yahao333/ralph/internal/cli"
 )
+
+func parseLogLevel(s string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
 
 func main() {
 	os.Exit(run())
 }
 
 func run() int {
-	// 1. 日志：开发期用 Text，生产期可切 JSON
+	// 1. 日志：级别通过 RALPH_LOG_LEVEL 环境变量配置，默认 info
+	level := parseLogLevel(os.Getenv("RALPH_LOG_LEVEL"))
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level: level,
 	}))
 	slog.SetDefault(logger)
 

@@ -28,6 +28,9 @@ linters:
     - prealloc         # slice 预分配
     - unconvert        # 多余类型转换
 
+    # 安全
+    - gosec            # 安全漏洞检测（硬编码密钥、弱加密、不安全 exec 等）
+
     # AI 协作场景特别有用
     - dupl             # 重复代码（AI 容易产出重复）
     - gocyclo          # 圈复杂度（AI 容易写超长函数）
