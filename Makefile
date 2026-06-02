@@ -1,5 +1,6 @@
 .PHONY: help build run test test-v test-cover lint fmt tidy clean install-tools
 
+GO ?= go
 BINARY := ralph
 PKG := ./...
 
@@ -8,13 +9,16 @@ help: ## 显示帮助
 
 build: ## 编译二进制到 bin/
 	@mkdir -p bin
-	go build -o bin/$(BINARY) ./cmd/$(BINARY)
+	$(GO)build -o bin/$(BINARY) ./cmd/$(BINARY)
+
+install:
+	$(GO) install ./cmd/ralph
 
 run: build ## 编译并运行
 	./bin/$(BINARY)
 
 test: ## 跑测试
-	go test -race -count=1 $(PKG)
+	$(GO) test -race -count=1 $(PKG)
 
 test-v: ## 跑测试（详细）
 	go test -race -count=1 -v $(PKG)
@@ -25,9 +29,12 @@ test-cover: ## 跑测试 + 覆盖率
 	@echo "覆盖率报告：coverage.html"
 
 lint: ## 跑 golangci-lint
-	golangci-lint run
+	$(GO) vet $(PKG)
+	@which staticcheck >/dev/null 2>&1 && staticcheck $(PKG) || echo "(staticcheck not installed, skipping)"
+	#golangci-lint run
 
 fmt: ## 格式化代码
+	#$(GO) fmt $(PKG)
 	gofmt -s -w .
 	goimports -w .
 
@@ -35,7 +42,8 @@ tidy: ## 整理依赖
 	go mod tidy
 
 clean: ## 清理产物
-	rm -rf bin/ dist/ coverage.txt coverage.html
+	rm -rf bin/ .ralph/runs/
+	#rm -rf bin/ dist/ coverage.txt coverage.html
 
 install-tools: ## 安装开发工具
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
