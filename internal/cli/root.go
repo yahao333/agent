@@ -65,7 +65,7 @@ func newVersionCmd() *cobra.Command {
 }
 
 func newRunCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "run [goal]",
 		Short: "Run the agent loop toward a goal",
 		Args:  cobra.MinimumNArgs(1),
@@ -78,4 +78,5 @@ func newRunCmd() *cobra.Command {
 			return err
 		},
 	}
+	return cmd
 }
