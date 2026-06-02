@@ -14,7 +14,8 @@ func NewRootCmd() *cobra.Command {
 		Short: "An AI agent that orchestrates Claude Code / other LLM CLIs",
 		Long: `Ralph is a CLI agent inspired by the "Ralph Wiggum technique" —
 a simple loop that drives Claude Code (or other LLM CLIs) toward a goal.`,
-		SilenceUsage: true, // 出错时不打印 usage（更干净）
+		SilenceUsage:  true, // 出错时不打印 usage（更干净）
+		SilenceErrors: true, // 错误由 main 统一处理，避免重复输出
 	}
 
 	cmd.AddCommand(newVersionCmd())
@@ -27,8 +28,9 @@ func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the version",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "ralph v0.0.1 (dev)")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			_, err := fmt.Fprintln(cmd.OutOrStdout(), "ralph v0.0.1 (dev)")
+			return err
 		},
 	}
 }
@@ -40,8 +42,8 @@ func newRunCmd() *cobra.Command {
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			goal := args[0]
-			fmt.Fprintf(cmd.OutOrStdout(), "TODO: run agent with goal=%q\n", goal)
-			return nil
+			_, err := fmt.Fprintf(cmd.OutOrStdout(), "TODO: run agent with goal=%q\n", goal)
+			return err
 		},
 	}
 }

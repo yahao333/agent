@@ -11,6 +11,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	// 1. 日志：开发期用 Text，生产期可切 JSON
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
@@ -24,6 +28,7 @@ func main() {
 	// 3. 执行 cobra root command
 	if err := cli.NewRootCmd().ExecuteContext(ctx); err != nil {
 		slog.Error("execution failed", "err", err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
