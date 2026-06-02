@@ -8,25 +8,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVersionCmd(t *testing.T) {
+// executeCmd is a test helper that creates a fresh RootCmd, runs it with the
+// given args, and returns captured stdout + any error.  Stderr is silenced.
+func executeCmd(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+
 	root := NewRootCmd()
 	var out bytes.Buffer
 	root.SetOut(&out)
-	root.SetArgs([]string{"version"})
+	root.SetErr(&bytes.Buffer{})
+	root.SetArgs(args)
 
 	err := root.Execute()
+	return out.String(), err
+}
+
+func TestVersionCmd(t *testing.T) {
+	out, err := executeCmd(t, "version")
 	require.NoError(t, err)
-	assert.Contains(t, out.String(), "ralph")
+	assert.Contains(t, out, "ralph")
 }
 
 func TestRunCmd_RequiresGoal(t *testing.T) {
-	root := NewRootCmd()
-	root.SetArgs([]string{"run"})
-	// 注意：不显式 SetOut，避免污染 stderr 输出
-	root.SetOut(&bytes.Buffer{})
-	root.SetErr(&bytes.Buffer{})
-
-	err := root.Execute()
+	_, err := executeCmd(t, "run")
 	require.Error(t, err, "run 命令在缺少 goal 参数时应该报错")
 }
 
