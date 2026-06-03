@@ -13,36 +13,30 @@ An autonomous AI agent that drives Claude Code toward a goal using a simple stat
 
 ## Quick Start
 
-### 1. Configure
-
-Create `.ralph/config.yaml` in your project:
-
-```yaml
-# Verification command (optional, defaults to "make test")
-verify_cmd: "make test"
-
-# Hard limits
-max_iterations: 50
-max_cost_usd: 5.0
-max_consecutive_fails: 3
-max_wall_clock_sec: 3600
-
-# Claude Code options
-permission_mode: "bypassPermissions"  # or "acceptEdits"
-model: ""  # empty = Claude Code default
-```
-
-### 2. Run
+### 1. Initialize
 
 ```bash
-# Single goal
-ralph run "create a hello.txt with the word hello"
-
-# With custom config
-ralph run --config /path/to/config.yaml "your task here"
+ralph init
 ```
 
-### 3. Observe
+This creates `.ralph/config.yaml` with sensible defaults.
+
+### 2. Configure (optional)
+
+Edit `.ralph/config.yaml` and set your verification command:
+
+```yaml
+# The command that confirms your task is "done"
+verify_cmd: "make test"  # or "go test ./...", "pytest", etc.
+```
+
+### 3. Run
+
+```bash
+ralph run "your task here"
+```
+
+### 4. Observe
 
 Ralph prints colored state transitions in real-time:
 
@@ -103,8 +97,9 @@ ralph/
 ## Commands
 
 ```bash
-ralph run [goal]    # Run a goal until completion or limit
-ralph version       # Show Ralph and Claude Code versions
+ralph init                    # Create .ralph/config.yaml with defaults
+ralph run [goal]              # Run a goal until completion or limit
+ralph version                 # Show Ralph and Claude Code versions
 ```
 
 ## Environment Variables
