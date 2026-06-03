@@ -69,7 +69,7 @@ func newLoopHarness(t *testing.T, cfg Config) *loopTestHarness {
 	verif := &mockVerifier{}
 	sink := executor.NopSink
 
-	loop := New(cfg, runDir, runID, exec, verif, sink)
+	loop := New(cfg, runDir, runID, runDir, exec, verif, sink)
 	h := &loopTestHarness{runDir: runDir, runID: runID, exec: exec, verif: verif, loop: loop}
 	// By default scratchpad is already set to in_progress by InitScratchpad.
 	// Tests that need a different initial state should use h.writeScratchpad(t, ...) or

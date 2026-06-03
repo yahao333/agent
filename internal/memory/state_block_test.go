@@ -156,3 +156,27 @@ func TestExtractStateBlock_UnknownStatus(t *testing.T) {
 		t.Errorf("expected fallback status in_progress, got: %v", block.IterationStatus)
 	}
 }
+func TestExtractStateBlock_CompletedAlias(t *testing.T) {
+	// "completed" should be treated as an alias for "done".
+	content := "<!-- ralph:state -->\n" +
+		"```json\n" +
+		"{\n" +
+		`  "iteration_status": "completed",` + "\n" +
+		`  "summary": "Task done",` + "\n" +
+		`  "blockers": []` + "\n" +
+		"}\n" +
+		"```\n" +
+		"<!-- /ralph:state -->"
+
+	block, err := ExtractStateBlock(content)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if block.IterationStatus != StatusDone {
+		t.Errorf("expected status 'done', got: %v", block.IterationStatus)
+	}
+	if block.Summary != "Task done" {
+		t.Errorf("expected summary 'Task done', got: %q", block.Summary)
+	}
+}

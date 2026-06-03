@@ -35,6 +35,48 @@ type RunState struct {
 	FailureReason string `json:"failure_reason,omitempty"`
 }
 
+// RunResult is written to result.json on terminal state (SUCCESS/FAILURE/ABORTED).
+// See docs/design/agent-loop.md §3.3.
+type RunResult struct {
+	RunID        string    `json:"run_id"`
+	SessionID    string    `json:"session_id"`
+	Goal         string    `json:"goal"`
+	StartedAt    time.Time `json:"started_at"`
+	FinishedAt   time.Time `json:"finished_at"`
+	DurationMS   int64     `json:"duration_ms"`
+	Status       string    `json:"status"` // SUCCESS|FAILURE|ABORTED
+	Iterations   int       `json:"iterations"`
+	TotalCostUSD float64   `json:"total_cost_usd"`
+	FailureReason string   `json:"failure_reason,omitempty"`
+}
+
+// WriteResult writes run result to result.json.
+// Must be called after the loop reaches a terminal state.
+func (l *Loop) WriteResult(status string) error {
+	st := l.store.Get()
+	result := RunResult{
+		RunID:         st.RunID,
+		SessionID:     st.SessionID,
+		Goal:          st.Goal,
+		StartedAt:     st.StartedAt,
+		FinishedAt:    time.Now().UTC(),
+		DurationMS:    st.TotalDurMS,
+		Status:        status,
+		Iterations:    st.IterationN,
+		TotalCostUSD:  st.TotalCostUSD,
+		FailureReason: st.FailureReason,
+	}
+	b, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal result: %w", err)
+	}
+	path := filepath.Join(l.runDir, "result.json")
+	if err := os.WriteFile(path, b, 0600); err != nil {
+		return fmt.Errorf("write result: %w", err)
+	}
+	return nil
+}
+
 // StateStore is goroutine-safe state.json reader/writer.
 type StateStore struct {
 	mu   sync.Mutex

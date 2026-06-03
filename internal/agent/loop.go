@@ -29,17 +29,19 @@ type Loop struct {
 	cfg      Config
 	runDir   string
 	runID    string
+	workDir  string // project root where claude operates
 	store    *StateStore
 	exec     executor.Executor
 	verifier verify.Verifier
 	sink     executor.EventSink
 }
 
-func New(cfg Config, runDir, runID string, exec executor.Executor, verifier verify.Verifier, sink executor.EventSink) *Loop {
+func New(cfg Config, runDir, runID, workDir string, exec executor.Executor, verifier verify.Verifier, sink executor.EventSink) *Loop {
 	return &Loop{
 		cfg:      cfg,
 		runDir:   runDir,
 		runID:    runID,
+		workDir:  workDir,
 		store:    NewStateStore(runDir),
 		exec:     exec,
 		verifier: verifier,
@@ -176,7 +178,7 @@ func (l *Loop) think(ctx context.Context, st RunState) (*executor.Response, erro
 		MaxBudgetUSD:       l.cfg.MaxCostUSD,
 		PermissionMode:     l.cfg.PermissionMode,
 		Model:              l.cfg.Model,
-		WorkDir:            l.runDir,
+		WorkDir:            l.workDir,
 	}
 
 	return l.exec.Run(ctx, req, l.sink, iterDir)

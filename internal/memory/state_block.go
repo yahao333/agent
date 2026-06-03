@@ -70,6 +70,11 @@ func ExtractStateBlock(scratchpadContent string) (*StateBlock, error) {
 		return fallback("<malformed state>"), &ExtractError{Reason: "malformed_json", Raw: jsonStr}
 	}
 
+	// Normalize "completed" to "done" (some LLMs use this alias).
+	if block.IterationStatus == "completed" {
+		block.IterationStatus = StatusDone
+	}
+
 	switch block.IterationStatus {
 	case StatusInProgress, StatusDone, StatusBlocked, StatusNeedsHuman:
 		// ok

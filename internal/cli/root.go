@@ -113,7 +113,7 @@ func newRunCmd() *cobra.Command {
 					PermissionMode:      cfg.PermissionMode,
 					Model:               cfg.Model,
 				},
-				dirs.Root, runID, exec, verifier, sink,
+				dirs.Root, runID, workDir, exec, verifier, sink,
 			)
 			ctx, cancel := context.WithCancel(cmd.Context())
 			defer cancel()
