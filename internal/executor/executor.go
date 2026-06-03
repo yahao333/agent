@@ -66,6 +66,16 @@ type Executor interface {
 	Run(ctx context.Context, req Request, sink EventSink, iterDir string) (*Response, error)
 }
 
+// NopSink is a sink that drops all events. Useful for testing.
+var NopSink EventSink = &nopSink{}
+
+type nopSink struct{}
+
+func (n *nopSink) OnAssistantText(text string)                            {}
+func (n *nopSink) OnAssistantThinking(text string)                        {}
+func (n *nopSink) OnToolUse(name, input string)                           {}
+func (n *nopSink) OnSystemInit(model, cwd string, tools []string)         {}
+
 // EventSink receives parsed stream-json events for live observation.
 // Implementations MUST be non-blocking (drop or buffer).
 type EventSink interface {

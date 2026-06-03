@@ -3,6 +3,10 @@ package agent
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/yahao333/ralph/internal/executor"
 	"github.com/yahao333/ralph/internal/memory"
@@ -66,6 +70,10 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 		}
 
 		st := l.store.Get()
+		// Terminal states: loop should not re-enter.
+		if st.FSMState == "SUCCESS" || st.FSMState == "FAILURE" || st.FSMState == "ABORTED" {
+			return nil
+		}
 
 		// --- THINK ---
 		if err := l.transitionTo("THINK", ""); err != nil {
@@ -73,7 +81,6 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 		}
 		resp, err := l.think(ctx, st)
 		if err != nil {
-			// TODO(claude-code): implement retry per claude-code-integration.md §4.3
 			return l.transitionTo("FAILURE", fmt.Sprintf("think failed: %v", err))
 		}
 
@@ -106,11 +113,13 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 		// --- Branch on status ---
 		switch block.IterationStatus {
 		case memory.StatusDone:
+			slog.Info("EXTRACT → done, entering VERIFY", "iterN", st.IterationN)
 			// --- VERIFY ---
 			if err := l.transitionTo("VERIFY", ""); err != nil {
 				return err
 			}
 			ok, output, exitCode, err := l.verifier.Run(ctx)
+			slog.Info("VERIFY completed", "ok", ok, "exitCode", exitCode, "err", err)
 			if err != nil {
 				return l.transitionTo("FAILURE", fmt.Sprintf("verify error: %v", err))
 			}
@@ -144,16 +153,59 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 }
 
 // think runs one executor turn. See claude-code-integration.md.
-//
-//nolint:revive // _st is reserved for future prompt injection
-func (l *Loop) think(_ context.Context, _ RunState) (*executor.Response, error) {
-	// TODO(claude-code): implement prompt construction:
-	// - If st.IterationN == 0: prompt = goal + "\n\nRead .ralph/runs/<id>/scratchpad.md and begin."
-	// - Else: prompt = "Continue."
-	// - If st.LastVerifyOutput != "": prepend "[RALPH FEEDBACK · Iter <N>]\n<output>"
-	//   then CLEAR LastVerifyOutput after this turn.
-	// See agent-loop.md §5.
-	return nil, fmt.Errorf("not implemented")
+func (l *Loop) think(ctx context.Context, st RunState) (*executor.Response, error) {
+	st = l.store.Get() // fresh snapshot
+
+	prompt, err := l.buildPrompt(st)
+	if err != nil {
+		return nil, fmt.Errorf("build prompt: %w", err)
+	}
+
+	iterDir := filepath.Join(l.runDir, "iterations", fmt.Sprintf("%03d", st.IterationN+1))
+	if err := os.MkdirAll(iterDir, 0755); err != nil {
+		return nil, fmt.Errorf("mkdir iter dir: %w", err)
+	}
+
+	systemSuffix, _ := os.ReadFile(filepath.Join(l.runDir, "system-prompt-suffix.md"))
+
+	req := executor.Request{
+		SessionID:          st.SessionID,
+		IsFirstTurn:        st.IterationN == 0,
+		Prompt:             prompt,
+		SystemPromptSuffix: string(systemSuffix),
+		MaxBudgetUSD:       l.cfg.MaxCostUSD,
+		PermissionMode:     l.cfg.PermissionMode,
+		Model:              l.cfg.Model,
+		WorkDir:            l.runDir,
+	}
+
+	return l.exec.Run(ctx, req, l.sink, iterDir)
+}
+
+// buildPrompt constructs the prompt for this iteration.
+// See agent-loop.md §5.
+func (l *Loop) buildPrompt(st RunState) (string, error) {
+	if st.IterationN == 0 {
+		return st.Goal + "\n\nRead .ralph/runs/" + st.RunID + "/scratchpad.md and begin.", nil
+	}
+
+	var sb strings.Builder
+	if st.LastVerifyOutput != "" {
+		sb.WriteString(fmt.Sprintf("[RALPH FEEDBACK · Iter %d]\n", st.IterationN))
+		sb.WriteString("You reported task complete, but external verification failed:\n")
+		out := st.LastVerifyOutput
+		if len(out) > 2000 {
+			out = out[len(out)-2000:]
+		}
+		sb.WriteString(out)
+		sb.WriteString("\n\nPlease analyze the failure and continue fixing.\n")
+		_ = l.store.Update(func(s *RunState) {
+			s.LastVerifyOutput = ""
+		})
+	}
+
+	sb.WriteString("Continue.")
+	return sb.String(), nil
 }
 
 func (l *Loop) extract() (*memory.StateBlock, error) {
@@ -171,10 +223,10 @@ func (l *Loop) guardCheck() string {
 		return fmt.Sprintf("max iterations reached (%d)", l.cfg.MaxIterations)
 	}
 	if l.cfg.MaxCostUSD > 0 && st.TotalCostUSD >= l.cfg.MaxCostUSD {
-		return fmt.Sprintf("max cost reached ($%.4f)", st.TotalCostUSD)
+		return fmt.Sprintf("max cost reached ($%.4f)", l.cfg.MaxCostUSD)
 	}
 	if l.cfg.MaxConsecutiveFails > 0 && st.ConsecutiveFails >= l.cfg.MaxConsecutiveFails {
-		return fmt.Sprintf("too many consecutive failures (%d)", st.ConsecutiveFails)
+		return fmt.Sprintf("too many consecutive failures (%d)", l.cfg.MaxConsecutiveFails)
 	}
 	// TODO: wall-clock check via StartedAt
 	return ""
