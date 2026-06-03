@@ -1,0 +1,110 @@
+# Ralph configuration
+# ===================
+# Copy this file to .ralph/config.yaml and edit as needed.
+# All fields are optional — Ralph ships with sane defaults.
+#
+# Docs: https://github.com/<you>/ralph/blob/main/docs/
+
+# ─────────────────────────────────────────────────────────────
+# 1. Verification — how Ralph knows the task is "done"
+# ─────────────────────────────────────────────────────────────
+
+# The command Ralph runs after the LLM reports `iteration_status: done`.
+# Exit code 0 = task complete (Ralph stops with SUCCESS).
+# Non-zero = failure (output is fed back to the LLM as [RALPH FEEDBACK],
+# loop continues).
+#
+# If omitted, Ralph falls back to `make test` IF a Makefile with a `test:`
+# target exists in the working directory. Otherwise Ralph refuses to start.
+#
+# Examples:
+#   verify_cmd: "make test"
+#   verify_cmd: "go test ./... && golangci-lint run"
+#   verify_cmd: "pnpm test && pnpm typecheck"
+#   verify_cmd: "pytest -x && ruff check ."
+#   verify_cmd: "./scripts/ci-local.sh"
+verify_cmd: "make test"
+
+
+# ─────────────────────────────────────────────────────────────
+# 2. Safety limits — when Ralph gives up
+# ─────────────────────────────────────────────────────────────
+# At least ONE of these should be set conservatively for your first runs.
+# Ralph stops as soon as ANY limit is hit (whichever comes first).
+
+# Hard cap on iterations. One iteration = one `claude -p` call.
+# Default: 50. For a fresh repo + unfamiliar task, start with 10.
+max_iterations: 50
+
+# Hard cap on Anthropic API spend for this Run (USD).
+# Forwarded to `claude --max-budget-usd`. Claude Code enforces it.
+# Default: 5.00. Bump up for large refactors; bump down while debugging Ralph.
+max_cost_usd: 5.00
+
+# Abort if the LLM returns `is_error: true` this many times in a row.
+# Catches situations like "Claude Code keeps hitting rate limits" or
+# "the LLM is stuck in a permission-denied loop".
+# Default: 3.
+max_consecutive_fails: 3
+
+# Hard cap on wall-clock time for the entire Run (seconds).
+# Default: 3600 (1 hour). Set to 0 to disable.
+max_wall_clock_sec: 3600
+
+
+# ─────────────────────────────────────────────────────────────
+# 3. Executor settings — how Ralph invokes Claude Code
+# ─────────────────────────────────────────────────────────────
+
+# Which model to use. Forwarded to `claude --model`.
+# Leave empty to use Claude Code's default (currently sonnet).
+# Common values: "sonnet", "opus", "haiku", or a full model ID.
+# model: "sonnet"
+
+# Permission mode passed to `claude --permission-mode`.
+# Options:
+#   bypassPermissions  — DEFAULT. No prompts; Claude can edit/run anything in
+#                        the working directory. Ralph requires this for
+#                        unattended operation.
+#   acceptEdits        — Auto-accept edits but prompt on shell commands.
+#                        ⚠️  Ralph cannot respond to prompts — only use this
+#                        if you're running Ralph attended for testing.
+#   default            — Prompt on everything. ⚠️  Will hang Ralph.
+#
+# ⚠️  bypassPermissions means the LLM can run `rm -rf` if it wants to.
+# ALWAYS run Ralph in a git repo with a clean working tree, OR in a
+# disposable container. See docs/safety.md.
+permission_mode: "bypassPermissions"
+
+
+# ─────────────────────────────────────────────────────────────
+# 4. Workspace — what Claude Code can see
+# ─────────────────────────────────────────────────────────────
+
+# Extra directories to expose to Claude Code via `--add-dir`.
+# By default Claude Code can only read/write under the current working
+# directory. Use this if your task spans multiple repos or needs reference
+# material outside the repo.
+#
+# Paths are absolute or relative to where you run `ralph`.
+#
+# add_dirs:
+#   - "../shared-protos"
+#   - "/Users/me/reference-docs"
+add_dirs: []
+
+
+# ─────────────────────────────────────────────────────────────
+# 5. (Future / v2) — listed here so you know they're coming
+# ─────────────────────────────────────────────────────────────
+# These keys are RESERVED but not yet implemented. Setting them today is
+# a no-op (Ralph will warn). Listed so config files don't need migration.
+
+# Resume behavior for `ralph resume <run_id>` (v2).
+# resume:
+#   enabled: false
+
+# Notification hooks (v2).
+# notify:
+#   on_success: ""   # e.g. "osascript -e 'display notification ...'"
+#   on_failure: ""
