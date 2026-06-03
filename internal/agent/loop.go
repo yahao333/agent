@@ -74,6 +74,9 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 		st := l.store.Get()
 		// Terminal states: loop should not re-enter.
 		if st.FSMState == "SUCCESS" || st.FSMState == "FAILURE" || st.FSMState == "ABORTED" {
+			if err := l.WriteResult(st.FSMState); err != nil {
+				slog.Error("write result", "err", err)
+			}
 			return nil
 		}
 
@@ -126,7 +129,13 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 				return l.transitionTo("FAILURE", fmt.Sprintf("verify error: %v", err))
 			}
 			if ok {
-				return l.transitionTo("SUCCESS", "")
+				if err := l.transitionTo("SUCCESS", ""); err != nil {
+					return err
+				}
+				if err := l.WriteResult("SUCCESS"); err != nil {
+					slog.Error("write result", "err", err)
+				}
+				return nil
 			}
 			// Inject feedback for next iteration.
 			if err := l.store.Update(func(s *RunState) {
@@ -149,7 +158,13 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 			return err
 		}
 		if reason := l.guardCheck(); reason != "" {
-			return l.transitionTo("FAILURE", reason)
+			if err := l.transitionTo("FAILURE", reason); err != nil {
+				return err
+			}
+			if err := l.WriteResult("FAILURE"); err != nil {
+				slog.Error("write result", "err", err)
+			}
+			return nil
 		}
 	}
 }
@@ -235,10 +250,18 @@ func (l *Loop) guardCheck() string {
 }
 
 func (l *Loop) transitionTo(state, reason string) error {
-	return l.store.Update(func(s *RunState) {
+	st := l.store.Get()
+	prevState := st.FSMState
+	iterN := st.IterationN
+	err := l.store.Update(func(s *RunState) {
 		s.FSMState = state
 		if state == "FAILURE" || state == "ABORTED" {
 			s.FailureReason = reason
 		}
 	})
+	if err != nil {
+		return err
+	}
+	l.sink.OnStateTransition(prevState, state, iterN, reason)
+	return nil
 }

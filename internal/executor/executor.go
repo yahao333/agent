@@ -83,4 +83,7 @@ type EventSink interface {
 	OnAssistantThinking(text string) // optional, for verbose mode
 	OnToolUse(name, input string)    // tool calls (for status line)
 	OnSystemInit(model, cwd string, tools []string)
+	OnStateTransition(prevState, nextState string, iterationN int, reason string)
 }
+
+func (n *nopSink) OnStateTransition(prevState, nextState string, iterationN int, reason string) {}

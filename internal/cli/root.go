@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"unicode"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/yahao333/ralph/internal/agent"
@@ -86,7 +87,7 @@ func newRunCmd() *cobra.Command {
 			if err := validateGoal(goal); err != nil {
 				return fmt.Errorf("invalid goal: %w", err)
 			}
-						workDir, _ := os.Getwd()
+					workDir, _ := os.Getwd()
 			cfg, err := config.Load(filepath.Join(workDir, ".ralph", "config.yaml"))
 			if err != nil {
 				return err
@@ -132,11 +133,46 @@ func newRunCmd() *cobra.Command {
 	return cmd
 }
 
-// consoleSink prints assistant text to stdout in real-time.
+// consoleSink prints real-time events with ANSI color and progress bar.
 type consoleSink struct{}
-func (c *consoleSink) OnAssistantText(text string)     { fmt.Print(text) }
+
+var stateColor = map[string]func(a ...interface{}) string{
+	"INIT":    color.New(color.FgWhite).SprintFunc(),
+	"THINK":   color.New(color.FgBlue).SprintFunc(),
+	"EXTRACT": color.New(color.FgYellow).SprintFunc(),
+	"VERIFY":  color.New(color.FgCyan).SprintFunc(),
+	"GUARD":   color.New(color.FgMagenta).SprintFunc(),
+	"SUCCESS": color.New(color.FgGreen, color.Bold).SprintFunc(),
+	"FAILURE": color.New(color.FgRed, color.Bold).SprintFunc(),
+	"ABORTED": color.New(color.FgRed).SprintFunc(),
+}
+
+func (c *consoleSink) OnAssistantText(text string) {
+	fmt.Print(text)
+}
+
 func (c *consoleSink) OnAssistantThinking(text string) {} // suppressed by default
-func (c *consoleSink) OnToolUse(name, input string)    { fmt.Fprintf(os.Stderr, "🔧 %s\n", name) }
+
+func (c *consoleSink) OnToolUse(name, input string) {
+	color.New(color.FgYellow).Fprintf(os.Stderr, "🔧 %s\n", name)
+}
+
 func (c *consoleSink) OnSystemInit(model, cwd string, tools []string) {
-	fmt.Fprintf(os.Stderr, "✓ model=%s cwd=%s tools=%d\n", model, cwd, len(tools))
+	color.New(color.FgGreen).Fprintf(os.Stderr, "✓ model=%s cwd=%s tools=%d\n", model, cwd, len(tools))
+}
+
+func (c *consoleSink) OnStateTransition(prevState, nextState string, iterationN int, reason string) {
+	col := stateColor[nextState]
+	if col == nil {
+		col = color.New(color.FgWhite).SprintFunc()
+	}
+	var extra string
+	if nextState == "FAILURE" || nextState == "ABORTED" {
+		extra = fmt.Sprintf(" — %s", reason)
+	}
+	var iterPrefix string
+	if nextState == "THINK" && iterationN > 0 {
+		iterPrefix = fmt.Sprintf("[Iter %d] ", iterationN)
+	}
+	fmt.Fprintf(os.Stderr, "\n%s→ %s%s\n", iterPrefix, col(nextState), extra)
 }
