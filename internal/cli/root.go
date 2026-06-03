@@ -63,6 +63,7 @@ a simple loop that drives Claude Code (or other LLM CLIs) toward a goal.`,
 
 	cmd.AddCommand(newVersionCmd())
 	cmd.AddCommand(newRunCmd())
+	cmd.AddCommand(newInitCmd())
 
 	return cmd
 }
@@ -140,6 +141,92 @@ func newRunCmd() *cobra.Command {
 	cmd.Flags().StringVar(&configPath, "config", "", "path to config.yaml (default: .ralph/config.yaml)")
 	return cmd
 }
+
+func newInitCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "init",
+		Short: "Create .ralph/ with a starter config",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			workDir, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("get working directory: %w", err)
+			}
+			ralphDir := filepath.Join(workDir, ".ralph")
+			configPath := filepath.Join(ralphDir, "config.yaml")
+
+			// 如果已经存在，报错而不是覆盖
+			if _, err := os.Stat(configPath); err == nil {
+				return fmt.Errorf(".ralph/config.yaml already exists, skipping")
+			}
+
+			// 创建 .ralph 目录
+			if err := os.MkdirAll(ralphDir, 0755); err != nil {
+				return fmt.Errorf("create .ralph dir: %w", err)
+			}
+
+			// 写入默认配置文件
+			if err := os.WriteFile(configPath, []byte(defaultConfigYAML), 0644); err != nil {
+				return fmt.Errorf("write config: %w", err)
+			}
+
+			color.New(color.FgGreen).Fprintf(cmd.OutOrStdout(), "✓ created .ralph/config.yaml — edit verify_cmd and run `ralph run <goal>\n")
+			return nil
+		},
+	}
+}
+
+// defaultConfigYAML 是 ralph init 生成的默认配置内容
+const defaultConfigYAML = `# Ralph configuration
+# ===================
+# All fields are optional — Ralph ships with sane defaults.
+#
+# Docs: https://github.com/yahao333/ralph/blob/main/README.md
+
+# ─────────────────────────────────────────────────────────────
+# 1. Verification — how Ralph knows the task is "done"
+# ─────────────────────────────────────────────────────────────
+
+# The command Ralph runs after the LLM reports ` + "`" + `iteration_status: done` + "`" + `.
+# Exit code 0 = task complete (Ralph stops with SUCCESS).
+# Non-zero = failure (output is fed back to the LLM as [RALPH FEEDBACK]).
+#
+# If omitted, Ralph falls back to ` + "`" + `make test` + "`" + ` if a Makefile with a ` + "`" + `test:` + "`" + ` target exists.
+#
+# Examples:
+#   verify_cmd: "make test"
+#   verify_cmd: "go test ./..."
+#   verify_cmd: "pytest -x"
+verify_cmd: "make test"
+
+# ─────────────────────────────────────────────────────────────
+# 2. Safety limits
+# ─────────────────────────────────────────────────────────────
+
+# Hard cap on iterations (one iteration = one ` + "`" + `claude -p` + "`" + ` call).
+max_iterations: 50
+
+# Hard cap on API spend (USD). Forwarded to ` + "`" + `claude --max-budget-usd` + "`" + `.
+max_cost_usd: 5.00
+
+# Abort after this many consecutive LLM errors.
+max_consecutive_fails: 3
+
+# Hard cap on wall-clock time (seconds).
+max_wall_clock_sec: 3600
+
+# ─────────────────────────────────────────────────────────────
+# 3. Claude Code settings
+# ─────────────────────────────────────────────────────────────
+
+# Which model to use (empty = Claude Code default).
+# model: "sonnet"
+
+# Permission mode. Options:
+#   bypassPermissions  — DEFAULT. No prompts; Claude can edit/run anything.
+#   acceptEdits        — Auto-accept edits but prompt on shell commands.
+#   default            — Prompt on everything (⚠️ will hang Ralph).
+permission_mode: "bypassPermissions"
+`
 
 // consoleSink prints real-time events with ANSI color and progress bar.
 type consoleSink struct{}

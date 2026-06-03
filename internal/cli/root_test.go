@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -128,4 +130,55 @@ func TestRunCmd_RejectsInvalidGoal(t *testing.T) {
 
 	err := root.Execute()
 	require.Error(t, err, "run should reject whitespace-only goal")
+}
+
+func TestInitCmd_CreatesConfig(t *testing.T) {
+	t.Parallel()
+	testDir := t.TempDir()
+
+	root := NewRootCmd()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&bytes.Buffer{})
+	root.SetArgs([]string{"init"})
+
+	// 在临时目录执行
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	require.NoError(t, os.Chdir(testDir))
+
+	err := root.Execute()
+	require.NoError(t, err, "init should succeed")
+
+	// 验证输出
+	assert.Contains(t, out.String(), "✓ created")
+	assert.Contains(t, out.String(), ".ralph/config.yaml")
+
+	// 验证文件存在
+	configPath := filepath.Join(testDir, ".ralph", "config.yaml")
+	data, err := os.ReadFile(configPath)
+	require.NoError(t, err, "config.yaml should exist")
+	assert.Contains(t, string(data), "verify_cmd:")
+	assert.Contains(t, string(data), "max_iterations:")
+}
+
+func TestInitCmd_Idempotent(t *testing.T) {
+	testDir := t.TempDir()
+
+	// 先创建一次
+	os.MkdirAll(filepath.Join(testDir, ".ralph"), 0755)
+	os.WriteFile(filepath.Join(testDir, ".ralph", "config.yaml"), []byte("existing"), 0644)
+
+	origDir, _ := os.Getwd()
+	defer os.Chdir(origDir)
+	require.NoError(t, os.Chdir(testDir))
+
+	root := NewRootCmd()
+	root.SetOut(&bytes.Buffer{})
+	root.SetErr(&bytes.Buffer{})
+	root.SetArgs([]string{"init"})
+
+	err := root.Execute()
+	require.Error(t, err, "init should fail when config already exists")
+	assert.Contains(t, err.Error(), "already exists")
 }
