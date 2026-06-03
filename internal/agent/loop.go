@@ -55,6 +55,8 @@ func (l *Loop) Run(ctx context.Context, goal string, sessionID string) error {
 	}
 	if err := memory.InitScratchpad(l.runDir, l.runID, goal); err != nil {
 		return fmt.Errorf("init scratchpad: %w", err)
+	}
+
 	// === MAIN LOOP ===
 	for {
 		select {

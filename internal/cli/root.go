@@ -1,12 +1,23 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
 	"strings"
+	"syscall"
 	"unicode"
 
 	"github.com/spf13/cobra"
+
+	"github.com/yahao333/ralph/internal/agent"
+	"github.com/yahao333/ralph/internal/config"
+	"github.com/yahao333/ralph/internal/executor"
+	"github.com/yahao333/ralph/internal/run"
+	"github.com/yahao333/ralph/internal/verify"
 )
 
 const maxGoalLen = 10000
