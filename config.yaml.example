@@ -14,6 +14,18 @@
 # Non-zero = failure (output is fed back to the LLM as [RALPH FEEDBACK],
 # loop continues).
 #
+# ⚠️  Keep it fast and narrow. Ralph runs this after EVERY iteration,
+# and a slow verify_cmd is the #1 cause of slow收敛.
+#
+# ✅ GOOD: go test ./pkg/foo/... -run TestBar
+# ✅ GOOD: pytest tests/unit/test_parser.py
+# ✅ GOOD: ruff check . && mypy src/
+# ❌ BAD: make ci          # 10 分钟全套 CI，一小时只跑 6 轮
+# ❌ BAD: go test ./...    # 全量测试，太慢
+#
+# Tip: 如果你只有慢的全量测试，先用最窄的子集跑通 Ralph，
+# 人工最终 review 时再跑全套 CI。
+#
 # If omitted, Ralph falls back to `make test` IF a Makefile with a `test:`
 # target exists in the working directory. Otherwise Ralph refuses to start.
 #

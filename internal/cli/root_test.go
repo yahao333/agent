@@ -154,11 +154,12 @@ func TestInitCmd_CreatesConfig(t *testing.T) {
 	assert.Contains(t, out.String(), "✓ created")
 	assert.Contains(t, out.String(), ".ralph/config.yaml")
 
-	// 验证文件存在
+	// 验证文件存在且包含 "Keep it fast" 建议
 	configPath := filepath.Join(testDir, ".ralph", "config.yaml")
 	data, err := os.ReadFile(configPath)
 	require.NoError(t, err, "config.yaml should exist")
 	assert.Contains(t, string(data), "verify_cmd:")
+	assert.Contains(t, string(data), "Keep it fast and narrow")
 	assert.Contains(t, string(data), "max_iterations:")
 }
 

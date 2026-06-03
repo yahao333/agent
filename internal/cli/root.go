@@ -190,12 +190,17 @@ const defaultConfigYAML = `# Ralph configuration
 # Exit code 0 = task complete (Ralph stops with SUCCESS).
 # Non-zero = failure (output is fed back to the LLM as [RALPH FEEDBACK]).
 #
-# If omitted, Ralph falls back to ` + "`" + `make test` + "`" + ` if a Makefile with a ` + "`" + `test:` + "`" + ` target exists.
+# ⚠️  Keep it fast and narrow. Ralph runs this after EVERY iteration,
+# and a slow verify_cmd is the #1 cause of slow收敛.
 #
-# Examples:
-#   verify_cmd: "make test"
-#   verify_cmd: "go test ./..."
-#   verify_cmd: "pytest -x"
+# ✅ GOOD: go test ./pkg/foo/... -run TestBar
+# ✅ GOOD: pytest tests/unit/test_parser.py
+# ✅ GOOD: ruff check . && mypy src/
+# ❌ BAD: make ci          # 10 minutes full CI, only 6 rounds per hour
+# ❌ BAD: go test ./...    # too slow
+#
+# Tip: If you only have slow full-suite tests, use the narrowest subset
+# to get Ralph working first, then run full CI in final human review.
 verify_cmd: "make test"
 
 # ─────────────────────────────────────────────────────────────
