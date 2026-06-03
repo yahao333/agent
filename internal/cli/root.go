@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -71,7 +72,14 @@ func newVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the version",
 		Run: func(cmd *cobra.Command, _ []string) {
-			fmt.Fprintln(cmd.OutOrStdout(), "ralph v0.0.1 (dev)")
+			fmt.Fprintf(cmd.OutOrStdout(), "Ralph v0.0.1 (dev)\n")
+			// 显示 claude 版本（如果可用）
+			if out, err := exec.Command("claude", "--version").Output(); err == nil {
+				lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+				if len(lines) > 0 {
+					fmt.Fprintf(cmd.OutOrStdout(), "Claude Code %s\n", strings.TrimSpace(lines[0]))
+				}
+			}
 		},
 	}
 }
@@ -87,7 +95,7 @@ func newRunCmd() *cobra.Command {
 			if err := validateGoal(goal); err != nil {
 				return fmt.Errorf("invalid goal: %w", err)
 			}
-					workDir, _ := os.Getwd()
+			workDir, _ := os.Getwd()
 			cfg, err := config.Load(filepath.Join(workDir, ".ralph", "config.yaml"))
 			if err != nil {
 				return err

@@ -27,7 +27,7 @@ func executeCmd(t *testing.T, args ...string) (string, error) {
 func TestVersionCmd(t *testing.T) {
 	out, err := executeCmd(t, "version")
 	require.NoError(t, err)
-	assert.Contains(t, out, "ralph")
+	assert.Contains(t, out, "Ralph")
 }
 
 func TestRunCmd_RequiresGoal(t *testing.T) {
@@ -88,8 +88,8 @@ func TestVersionCmd_OutputFormat(t *testing.T) {
 
 	err := root.Execute()
 	require.NoError(t, err)
-	assert.Contains(t, out.String(), "ralph v")
-	assert.Contains(t, out.String(), "\n")
+	assert.Contains(t, out.String(), "Ralph v")
+	assert.Contains(t, out.String(), "Claude Code")
 }
 
 func TestValidateGoal(t *testing.T) {
