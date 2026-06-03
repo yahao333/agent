@@ -1,0 +1,4 @@
+# 给 Claude Code 的开场白
+"读 CLAUDE.md，然后读 docs/design/ 下的所有文件。
+ 接下来按 'Phase 1' 实现。每完成一个 ☐，
+ 跑 make test 确认通过，然后停下来等我 review。"
