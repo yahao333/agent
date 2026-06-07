@@ -1,0 +1,16 @@
+if cfg.CheckpointEvery > 0 && iter % cfg.CheckpointEvery == 0 {
+    fmt.Println("─── Checkpoint ───")
+    fmt.Printf("Completed %d iterations. Last status: %s\n", iter, lastStatus)
+    fmt.Println("Press ENTER to continue, type 'q' to abort, or type feedback to inject:")
+    
+    line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+    line = strings.TrimSpace(line)
+    switch line {
+    case "q":
+        return ErrUserAborted
+    case "":
+        // continue
+    default:
+        injectedFeedback = line  // prepended to next PROMPT.md
+    }
+}
