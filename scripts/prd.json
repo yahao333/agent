@@ -1,0 +1,22 @@
+[
+  {
+    "category": "functional",
+    "description": "新聊天按钮创建一个新的对话",
+    "steps": [
+      "点击'新聊天'按钮",
+      "验证新对话已创建",
+      "检查聊天区域显示欢迎状态"
+    ],
+    "passes": false
+  },
+  {
+    "category": "integration",
+    "description": "前后端集成点验证",
+    "steps": [
+      "前端调用 API 端点",
+      "后端正确响应",
+      "错误处理工作正常"
+    ],
+    "passes": false
+  }
+]
