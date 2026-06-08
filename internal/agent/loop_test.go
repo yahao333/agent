@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -339,4 +340,40 @@ func TestLoop_MaxConsecutiveFails(t *testing.T) {
 	assert.Equal(t, "FAILURE", st.FSMState)
 	assert.Equal(t, 2, st.ConsecutiveFails)
 	assert.Contains(t, st.FailureReason, "too many consecutive failures")
+}
+
+// --- Additional: max_wall_clock_sec → FAILURE ---
+func TestLoop_MaxWallClockSec(t *testing.T) {
+	h := newLoopHarness(t, Config{MaxIterations: 10, MaxWallClockSec: 1})
+	h.verif.results = []bool{false} // verifier fails (doesn't matter, wall-clock will trigger first)
+	h.verif.exitCodes = []int{1}
+	h.verif.outputs = []string{"n/a"}
+
+	// Provide 3 responses. The wall-clock check triggers at GUARD after iter 1's EXTRACT.
+	// We backdate StartedAt in the second AfterEach (after first think()), so when
+	// GUARD runs for iter 1, the clock is already expired.
+	h.exec.AppendResponse(mockResponse()) // iter 1
+	h.exec.AppendResponse(mockResponse()) // iter 2 (never reached - wall-clock kills it first)
+	h.exec.AppendResponse(mockResponse()) // iter 3 (never reached)
+
+	iter := 0
+	h.exec.AfterEach = func(req executor.Request, resp *executor.Response, err error) {
+		iter++
+		// Backdate after first think completes but before its GUARD check.
+		if iter == 1 {
+			h.loop.store.Update(func(s *RunState) {
+				s.StartedAt = time.Now().Add(-2 * time.Second)
+			})
+		}
+		h.updateScratchpadState(t, memory.StatusInProgress, "Still working")
+	}
+
+	h.writeScratchpad(t, makeStateBlock(memory.StatusInProgress, "working"))
+
+	_ = h.loop.Run(context.Background(), "test goal", "sess-001")
+	st := h.loop.store.Get()
+	t.Logf("fsmState=%q  reason=%q", st.FSMState, st.FailureReason)
+
+	assert.Equal(t, "FAILURE", st.FSMState)
+	assert.Contains(t, st.FailureReason, "max wall-clock time reached")
 }

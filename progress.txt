@@ -1,0 +1,18 @@
+# Ralph 进度记录
+
+## 2026/06/09
+
+### 完成的任务
+- **wall-clock 时间限制检查** - 实现 `guardCheck()` 中的 `MaxWallClockSec` 检查
+
+### 更改的文件
+- `internal/agent/loop.go` - 添加 wall-clock 时间检查逻辑
+- `internal/agent/loop_test.go` - 添加 `TestLoop_MaxWallClockSec` 测试
+
+### 关键决策
+- 使用 `time.Since(st.StartedAt).Seconds()` 计算已用时间
+- 检查 `elapsedSec >= l.cfg.MaxWallClockSec` 触发失败
+
+### 备注
+- 发现 prd.json 中的任务（"新聊天按钮"）与 Go Ralph 项目（AI 代理 CLI）不匹配，需要澄清
+- 代码库基础架构已完成，测试全部通过

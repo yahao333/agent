@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/yahao333/ralph/internal/executor"
 	"github.com/yahao333/ralph/internal/memory"
@@ -245,7 +246,12 @@ func (l *Loop) guardCheck() string {
 	if l.cfg.MaxConsecutiveFails > 0 && st.ConsecutiveFails >= l.cfg.MaxConsecutiveFails {
 		return fmt.Sprintf("too many consecutive failures (%d)", l.cfg.MaxConsecutiveFails)
 	}
-	// TODO: wall-clock check via StartedAt
+	if l.cfg.MaxWallClockSec > 0 {
+		elapsedSec := int(time.Since(st.StartedAt).Seconds())
+		if elapsedSec >= l.cfg.MaxWallClockSec {
+			return fmt.Sprintf("max wall-clock time reached (%d sec)", l.cfg.MaxWallClockSec)
+		}
+	}
 	return ""
 }
 
